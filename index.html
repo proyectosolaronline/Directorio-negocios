@@ -231,7 +231,7 @@ function nombreVisible(nombre){
   return String(nombre || 'Negocio').split('&')[0].trim() || 'Negocio';
 }
 function nombreCarpeta(nombre){
-  return String(nombreVisible(nombre)).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ñ/gi,'n').replace(/[^a-zA-Z0-9\s-]/g,'').trim().replace(/\s+/g,'-');
+  return String(nombreVisible(nombre)).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ñ/gi,'n').replace(/[^a-zA-Z0-9\s-]/g,'').trim().replace(/\s+/g,'-').toLowerCase();
 }
 // Un negocio es de delivery cuando su nombre en el Sheet lleva "& Delivery"
 function esDelivery(n){ return /&\s*delivery/i.test(String((n && n.nombre) || '')); }
@@ -334,7 +334,7 @@ function renderizarGrid(){
   }
   grid.innerHTML = filtrados.map(n => `
     <div class="card" onclick="abrirFicha(${negocios.indexOf(n)})">
-      <div class="card-head">
+ <div class="card-head">
         ${n.logo ? `<img class="card-logo" src="${escHTML(n.logo)}" alt="" onerror="this.outerHTML='<div class=&quot;card-logo card-logo-vacio&quot;>🏪</div>'">` : `<div class="card-logo card-logo-vacio">🏪</div>`}
         <div class="card-tit"><h3>${escHTML(nombreVisible(n.nombre))}</h3>${esDelivery(n)?'<span class="badge-del">🛵 Delivery</span>':''}${ubic?`<div class="card-dist">📡 a ${fmtDist(distKm(n))}</div>`:''}</div>
       </div>
@@ -342,7 +342,7 @@ function renderizarGrid(){
         <p>${descCorta(n.descripcion)}</p>
         <div class="card-actions">
           <a class="btn-mini btn-mapa" href="https://www.google.com/maps/dir/?api=1&destination=${n.latitud},${n.longitud}" target="_blank" onclick="event.stopPropagation()">🧭 Cómo llegar</a>
-          <a class="btn-mini btn-ver" href="javascript:void(0)" onclick="event.stopPropagation();abrirFicha(${negocios.indexOf(n)})">🌐 Ver negocio</a>
+                    <a class="btn-mini btn-ver" href="${urlLanding(n)}" target="_blank" onclick="event.stopPropagation()">🌐 Ver negocio</a>
         </div>
       </div>
     </div>
