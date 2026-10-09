@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Directorio de Negocios</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  * { box-sizing: border-box; margin:0; padding:0; }
+  body { font-family: 'Segoe UI', sans-serif; background:#0A0E17; color:#E0E0E0; padding-bottom:90px; }
+
+  .mini-banner {
+    width:100%; height:160px;
+    background: linear-gradient(rgba(10,14,23,.35),rgba(10,14,23,.55)), url('imagen/banner.jpg') center/cover no-repeat, linear-gradient(135deg,#7B2FF7,#FF00E5,#00D4FF);
+  }
+  @media (max-width:600px){ .mini-banner{ height:120px; } }
+
+  header { background: linear-gradient(135deg,#7B2FF7,#FF00E5,#00D4FF); padding:24px 16px; text-align:center; }
+  header h1 { font-size:22px; color:#fff; text-shadow:0 0 15px rgba(255,255,255,.5); margin-bottom:14px; }
+  .search-wrap { max-width:560px; margin:0 auto; display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+  #buscador { flex:1; min-width:220px; padding:14px 18px; border-radius:30px; border:none; font-size:15px; outline:none; }
+
+  .contenedor { max-width:1100px; margin:24px auto; padding:0 16px; }
+  #contador { font-size:13px; color:#888; margin-bottom:14px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:18px; }
+  .card { background:#1A1A2E; border-radius:16px; overflow:hidden; border:1px solid #2A2A4A; transition:transform .2s, box-shadow .2s; cursor:pointer; }
+  .card:hover { transform:translateY(-4px); box-shadow:0 0 25px rgba(0,212,255,.25); }
+  .card-banner { height:120px; background:linear-gradient(135deg,#7B2FF7,#FF00E5,#00D4FF); background-size:cover; background-position:center; position:relative; }
+  .card-logo { width:56px; height:56px; border-radius:50%; object-fit:cover; border:3px solid #00D4FF; position:absolute; left:14px; bottom:-28px; background:#1A1A2E; }
+  .card-body { padding:36px 14px 14px; }
+  .card-body h3 { font-size:16px; margin-bottom:6px; }
+  .card-body p { font-size:12.5px; color:#AAA; line-height:1.5; max-height:54px; overflow:hidden; margin-bottom:12px; }
+  .card-actions { display:flex; gap:8px; }
+  .btn-mini { flex:1; text-align:center; padding:9px 10px; border-radius:10px; font-size:12.5px; font-weight:700; text-decoration:none; border:none; cursor:pointer; }
+  .btn-mapa { background:#00D4FF; color:#0A0E17; }
+  .btn-ver { background:#7B2FF7; color:#fff; }
+  .empty { text-align:center; padding:60px 20px; color:#888; grid-column:1/-1; }
+
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.8); z-index:2000; align-items:center; justify-content:center; padding:16px; }
+  .modal-overlay.active { display:flex; }
+  .modal-mapa { background:#1A1A2E; width:100%; max-width:720px; border-radius:16px; overflow:hidden; border:1px solid #7B2FF7; }
+  .modal-mapa-header { display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:#0D1117; }
+  .modal-mapa-header h2 { font-size:16px; }
+  .modal-mapa-header button { background:none; border:none; color:#AAA; font-size:26px; cursor:pointer; }
+  #mapaGeneral { height:460px; }
+
+  .popup-negocio { font-family:'Segoe UI',sans-serif; width:200px; }
+  .popup-negocio .pop-banner { width:100%; height:70px; border-radius:8px; margin-bottom:6px; background:linear-gradient(135deg,#7B2FF7,#00D4FF); }
+  .popup-negocio h4 { font-size:13.5px; margin-bottom:4px; color:#111; }
+  .popup-negocio p { font-size:11px; color:#444; margin-bottom:8px; line-height:1.4; }
+  .popup-negocio .pop-actions { display:flex; gap:6px; }
+  .popup-negocio .pop-btn { flex:1; text-align:center; padding:6px 4px; border-radius:7px; font-size:10.5px; font-weight:700; text-decoration:none; border:none; cursor:pointer; }
+  .pop-btn-ir { background:#00D4FF; color:#0A0E17; }
+  .pop-btn-ver { background:#7B2FF7; color:#fff; }
+
+  @media (max-width:600px){ #mapaGeneral{ height:360px; } }
+
+  .fab-mapa {
+    position: fixed; bottom: 22px; right: 22px;
+    width: 62px; height: 62px; border-radius: 50%;
+    background: linear-gradient(135deg,#7B2FF7,#FF00E5,#00D4FF);
+    color: #fff; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; z-index: 1500;
+    box-shadow: 0 0 25px rgba(123,47,247,.6), 0 0 50px rgba(0,212,255,.4);
+    animation: fabPulse 1.8s infinite;
+  }
+  .fab-mapa:active { transform: scale(0.92); }
+  @keyframes fabPulse {
+    0%   { transform: scale(1);    box-shadow: 0 0 20px rgba(123,47,247,.55), 0 0 40px rgba(0,212,255,.35); }
+    50%  { transform: scale(1.12); box-shadow: 0 0 35px rgba(123,47,247,.9), 0 0 65px rgba(0,212,255,.6); }
+    100% { transform: scale(1);    box-shadow: 0 0 20px rgba(123,47,247,.55), 0 0 40px rgba(0,212,255,.35); }
+  }
+  .fab-mapa .fab-tooltip {
+    position: absolute; right: 72px; top: 50%; transform: translateY(-50%);
+    background: #222; color: #fff; padding: 6px 12px; border-radius: 8px;
+    font-size: 12.5px; white-space: nowrap; opacity: 0; pointer-events: none;
+    transition: opacity .2s ease;
+  }
+  .fab-mapa:hover .fab-tooltip { opacity: 1; }
+  @media (max-width:600px){
+    .fab-mapa { bottom:16px; right:16px; width:56px; height:56px; font-size:23px; }
+    .fab-mapa .fab-tooltip { display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="mini-banner" id="miniBanner"></div>
+
+<header>
+  <h1>🔎 Directorio de Negocios</h1>
+  <div class="search-wrap">
+    <input type="text" id="buscador" placeholder="Busca un negocio o producto...">
+  </div>
+</header>
+
+<div class="contenedor">
+  <div id="contador"></div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<button class="fab-mapa" id="btnVerMapa" aria-label="Abrir negocios en mapa">
+  📍
+  <span class="fab-tooltip">Ver negocios en mapa</span>
+</button>
+
+<!-- Modal mapa general -->
+<div class="modal-overlay" id="modalMapaOverlay">
+  <div class="modal-mapa">
+    <div class="modal-mapa-header">
+      <h2>🗺️ Negocios en el mapa</h2>
+      <button onclick="cerrarMapaGeneral()">&times;</button>
+    </div>
+    <div id="mapaGeneral"></div>
+  </div>
+</div>
+
+<script>
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzC0XThmPutT8VjPMyYiRrvVIREMr3LfHeRIYsFFJ8wT_H-3vmKcaAuqbz337BahBmPeg/exec';
+
+let negocios = [];
+let mapaGeneral = null;
+let markersLayer = null;
+
+function callAPI(action, params = {}) {
+  return new Promise((resolve, reject) => {
+    const cb = 'cb_' + Date.now() + '_' + Math.random().toString(36).substr(2,9);
+    window[cb] = function(result) {
+      delete window[cb];
+      document.body.removeChild(script);
+      resolve(result);
+    };
+    let url = `${APPS_SCRIPT_URL}?action=${action}&callback=${cb}`;
+    for (const k in params) url += `&${k}=${encodeURIComponent(params[k])}`;
+    const script = document.createElement('script');
+    script.src = url;
+    script.onerror = function(){ delete window[cb]; document.body.removeChild(script); reject(new Error('Error de conexión')); };
+    document.body.appendChild(script);
+  });
+}
+
+function escHTML(t){ return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function slugNegocio(n){
+  return (n.nombre||'negocio').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+}
+
+function urlLanding(n){
+  return `https://proyectosolaronline.github.io/${slugNegocio(n)}/`;
+}
+
+function textoBusqueda(n){
+  const fotosTxt = (n.fotos||[]).map(f => f && f.descripcion ? f.descripcion : '').join(' ');
+  return [n.nombre, n.descripcion, n.slogan, fotosTxt].join(' ').toLowerCase();
+}
+
+async function cargarNegocios(){
+  document.getElementById('contador').textContent = 'Cargando negocios...';
+  try {
+    const result = await callAPI('obtenerNegocios');
+    if (result.success) {
+      negocios = (result.negocios||[]).filter(n => n.activo && n.latitud && n.longitud);
+      renderizarGrid();
+    } else {
+      document.getElementById('contador').textContent = 'Error al cargar negocios';
+    }
+  } catch(e) {
+    document.getElementById('contador').textContent = 'Error de conexión';
+  }
+}
+
+function renderizarGrid(){
+  const term = document.getElementById('buscador').value.trim().toLowerCase();
+  const grid = document.getElementById('grid');
+  const filtrados = term ? negocios.filter(n => textoBusqueda(n).includes(term)) : negocios;
+  document.getElementById('contador').textContent = `Mostrando ${filtrados.length} de ${negocios.length} negocios`;
+  if (!filtrados.length) {
+    grid.innerHTML = '<div class="empty">😕 No se encontraron negocios</div>';
+    return;
+  }
+  grid.innerHTML = filtrados.map(n => `
+    <div class="card" onclick="window.open('${urlLanding(n)}','_blank')">
+      <div class="card-banner" style="${n.banner?`background-image:url('${n.banner}');`:''}">
+        ${n.logo ? `<img class="card-logo" src="${n.logo}">` : ''}
+      </div>
+      <div class="card-body">
+        <h3>${escHTML(n.nombre)}</h3>
+        <p>${escHTML(n.descripcion||n.slogan||'')}</p>
+        <div class="card-actions">
+          <a class="btn-mini btn-mapa" href="https://www.google.com/maps/dir/?api=1&destination=${n.latitud},${n.longitud}" target="_blank" onclick="event.stopPropagation()">📍 Ver en mapa</a>
+          <a class="btn-mini btn-ver" href="${urlLanding(n)}" target="_blank" onclick="event.stopPropagation()">🌐 Ver negocio</a>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+document.getElementById('buscador').addEventListener('input', renderizarGrid);
+
+// ===== MAPA GENERAL CON TODOS LOS NEGOCIOS =====
+function abrirMapaGeneral(){
+  document.getElementById('modalMapaOverlay').classList.add('active');
+  setTimeout(() => {
+    if (!mapaGeneral) {
+      mapaGeneral = L.map('mapaGeneral');
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap', maxZoom:19 }).addTo(mapaGeneral);
+      markersLayer = L.layerGroup().addTo(mapaGeneral);
+    }
+    markersLayer.clearLayers();
+    const bounds = [];
+    negocios.forEach(n => {
+      const lat = parseFloat(n.latitud), lng = parseFloat(n.longitud);
+      if (isNaN(lat) || isNaN(lng)) return;
+      bounds.push([lat,lng]);
+      const productos = (n.fotos||[]).filter(f=>f&&f.descripcion).map(f=>{
+        const partes = f.descripcion.split('&');
+        return partes[0].trim();
+      }).filter(Boolean).slice(0,3).join(', ');
+      const popupHTML = `
+        <div class="popup-negocio">
+          <div class="pop-banner" style="${n.banner?`background-image:url('${n.banner}');background-size:cover;background-position:center;`:''}"></div>
+          <h4>${escHTML(n.nombre)}</h4>
+          <p>${escHTML(productos || n.descripcion || '')}</p>
+          <div class="pop-actions">
+            <a class="pop-btn pop-btn-ir" href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank">🧭 Cómo llegar</a>
+            <a class="pop-btn pop-btn-ver" href="${urlLanding(n)}" target="_blank">🌐 Ver negocio</a>
+          </div>
+        </div>`;
+      const marker = L.marker([lat,lng]).addTo(markersLayer);
+      marker.bindTooltip(n.nombre || '', { permanent:false, direction:'top' });
+      marker.bindPopup(popupHTML, { maxWidth:220 });
+    });
+    if (bounds.length) mapaGeneral.fitBounds(bounds, { padding:[30,30] });
+    else mapaGeneral.setView([20.5888,-100.3899], 12);
+    mapaGeneral.invalidateSize();
+  }, 150);
+}
+
+function cerrarMapaGeneral(){
+  document.getElementById('modalMapaOverlay').classList.remove('active');
+}
+
+document.getElementById('btnVerMapa').addEventListener('click', abrirMapaGeneral);
+document.getElementById('modalMapaOverlay').addEventListener('click', function(e){ if (e.target===this) cerrarMapaGeneral(); });
+
+cargarNegocios();
+</script>
+</body>
+</html>
