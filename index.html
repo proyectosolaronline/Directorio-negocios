@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Directorio de Negocios</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  * { box-sizing: border-box; margin:0; padding:0; }
+  body { font-family: 'Segoe UI', sans-serif; background:#0A0E17; color:#E0E0E0; padding-bottom:90px; }
+  .mini-banner { width:100%; height:160px; background: linear-gradient(rgba(10,14,23,.35),rgba(10,14,23,.55)), url('imagen/banner.jpg') center/cover no-repeat, linear-gradient(135deg,#7B2FF7,#FF00E5,#00D4FF); }
+  @media (max-width:600px){ .mini-banner{ height:120px; } }
+  header { background: linear-gradient(135deg,#7B2FF7,#FF00E5,#00D4FF); padding:24px 16px; text-align:center; }
+  header h1 { font-size:22px; color:#fff; text-shadow:0 0 15px rgba(255,255,255,.5); margin-bottom:14px; }
+  .search-wrap { max-width:560px; margin:0 auto; display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+  #buscador { flex:1; min-width:220px; padding:14px 18px; border-radius:30px; border:none; font-size:15px; outline:none; }
+  .contenedor { max-width:1100px; margin:24px auto; padding:0 16px; }
+  #contador { font-size:13px; color:#888; margin-bottom:14px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:18px; }
+  .card { background:#1A1A2E; border-radius:16px; overflow:hidden; border:1px solid #2A2A4A; transition:transform .2s, box-shadow .2s; cursor:pointer; }
+  .card:hover { transform:translateY(-4px); box-shadow:0 0 25px rgba(0,212,255,.25); }
+  .card-banner { height:120px; background:linear-gradient(135deg,#7B2FF7,#FF00E5,#00D4FF); background-size:cover; background-position:center; position:relative; }
+  .card-logo { width:56px; height:56px; border-radius:50%; object-fit:cover; border:3px solid #00D4FF; position:absolute; left:14px; bottom:-28px; background:#1A1A2E; }
+  .card-body { padding:36px 14px 14px; }
+  .card-body h3 { font-size:16px; margin-bottom:6px; }
+  .card-body p { font-size:12.5px; color:#AAA; line-height:1.5; max-height:54px; overflow:hidden; margin-bottom:12px; }
+  .card-actions { display:flex; gap:8px; }
+  .btn-mini { flex:1; text-align:center; padding:9px 10px; border-radius:10px; font-size:12.5px; font-weight:700; text-decoration:none; border:none; cursor:pointer; }
+  .btn-mapa { background:#00D4FF; color:#0A0E17; }
+  .btn-ver { background:#7B2FF7; color:#fff; }
+  .empty { text-align:center; padding:60px 20px; color:#888; grid-column:1/-1; }
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.8); z-index:2000; align-items:center; justify-content:center; padding:16px; }
+  .modal-overlay.active { display:flex; }
+  .modal-mapa { background:#1A1A2E; width:100%; max-width:720px; border-radius:16px; overflow:hidden; border:1px solid #7B2FF7; display:flex; flex-direction:column; }
+  .modal-mapa-header { display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:#0D1117; }
+  .modal-mapa-header h2 { font-size:16px; }
+  .modal-mapa-header button { background:none; border:none; color:#AAA; font-size:26px; cursor:pointer; }
+  #mapaGeneral { height:460px; }
+  .modal-negocio { background:#0A0E17; width:100%; max-width:960px; height:92vh; border-radius:16px; overflow:hidden; border:1px solid #7B2FF7; display:flex; flex-direction:column; }
+  #negocioFrame { flex:1; border:none; width:100%; background:#0A0E17; }
+  .popup-negocio { font-family:'Segoe UI',sans-serif; width:200px; }
+  .popup-negocio .pop-banner { width:100%; height:70px; border-radius:8px; margin-bottom:6px; background:linear-gradient(135deg,#7B2FF7,#00D4FF); }
+  .popup-negocio h4 { font-size:13.5px; margin-bottom:4px; color:#111; }
+  .popup-negocio p { font-size:11px; color:#444; margin-bottom:8px; line-height:1.4; }
+  .popup-negocio .pop-actions { display:flex; gap:6px; }
+  .popup-negocio .pop-btn { flex:1; text-align:center; padding:6px 4px; border-radius:7px; font-size:10.5px; font-weight:700; text-decoration:none; border:none; cursor:pointer; }
+  .pop-btn-ir { background:#00D4FF; color:#0A0E17; }
+  .pop-btn-ver { background:#7B2FF7; color:#fff; }
+  @media (max-width:600px){ #mapaGeneral{ height:360px; } .modal-negocio{ height:100vh; border-radius:0; max-width:100%; } }
+  .fab-mapa { position: fixed; bottom: 22px; right: 22px; width: 62px; height: 62px; border-radius: 50%; background: linear-gradient(135deg,#7B2FF7,#FF00E5,#00D4FF); color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 26px; z-index: 1500; box-shadow: 0 0 25px rgba(123,47,247,.6), 0 0 50px rgba(0,212,255,.4); animation: fabPulse 1.8s infinite; }
+  .fab-mapa:active { transform: scale(0.92); }
+  @keyframes fabPulse { 0% { transform: scale(1); box-shadow: 0 0 20px rgba(123,47,247,.55), 0 0 40px rgba(0,212,255,.35); } 50% { transform: scale(1.12); box-shadow: 0 0 35px rgba(123,47,247,.9), 0 0 65px rgba(0,212,255,.6); } 100% { transform: scale(1); box-shadow: 0 0 20px rgba(123,47,247,.55), 0 0 40px rgba(0,212,255,.35); } }
+  .fab-mapa .fab-tooltip { position: absolute; right: 72px; top: 50%; transform: translateY(-50%); background: #222; color: #fff; padding: 6px 12px; border-radius: 8px; font-size: 12.5px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+  .fab-mapa:hover .fab-tooltip { opacity: 1; }
+  @media (max-width:600px){ .fab-mapa { bottom:16px; right:16px; width:56px; height:56px; font-size:23px; } .fab-mapa .fab-tooltip { display:none; } }
+</style>
+</head>
+<body>
+
+<div class="mini-banner" id="miniBanner"></div>
+
+<header>
+  <h1>🔎 Directorio de Negocios</h1>
+  <div class="search-wrap">
+    <input type="text" id="buscador" placeholder="Busca un negocio o producto...">
+  </div>
+</header>
+
+<div class="contenedor">
+  <div id="contador"></div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<button class="fab-mapa" id="btnVerMapa" aria-label="Abrir negocios en mapa">
+  📍
+  <span class="fab-tooltip">Ver negocios en mapa</span>
+</button>
+
+<div class="modal-overlay" id="modalMapaOverlay">
+  <div class="modal-mapa">
+    <div class="modal-mapa-header">
+      <h2>🗺️ Negocios en el mapa</h2>
+      <button onclick="cerrarMapaGeneral()">&times;</button>
+    </div>
+    <div id="mapaGeneral"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="negocioOverlay">
+  <div class="modal-negocio">
+    <div class="modal-mapa-header">
+      <h2 id="negocioTitle">🏪 Negocio</h2>
+      <button onclick="cerrarNegocio()">&times;</button>
+    </div>
+    <iframe id="negocioFrame" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
+  </div>
+</div>
+
+<script>
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzC0XThmPutT8VjPMyYiRrvVIREMr3LfHeRIYsFFJ8wT_H-3vmKcaAuqbz337BahBmPeg/exec';
+
+let negocios = [];
+let mapaGeneral = null;
+let markersLayer = null;
+
+function callAPI(action, params = {}) {
+  return new Promise((resolve, reject) => {
+    const cb = 'cb_' + Date.now() + '_' + Math.random().toString(36).substr(2,9);
+    window[cb] = function(result) {
+      delete window[cb];
+      document.body.removeChild(script);
+      resolve(result);
+    };
+    let url = `${APPS_SCRIPT_URL}?action=${action}&callback=${cb}`;
+    for (const k in params) url += `&${k}=${encodeURIComponent(params[k])}`;
+    const script = document.createElement('script');
+    script.src = url;
+    script.onerror = function(){ delete window[cb]; document.body.removeChild(script); reject(new Error('Error de conexión')); };
+    document.body.appendChild(script);
+  });
+}
+
+function escHTML(t){ return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function textoBusqueda(n){
+  const fotosTxt = (n.fotos||[]).map(f => f && f.descripcion ? f.descripcion : '').join(' ');
+  return [n.nombre, n.descripcion, n.slogan, fotosTxt].join(' ').toLowerCase();
+}
+
+async function cargarNegocios(){
+  document.getElementById('contador').textContent = 'Cargando negocios...';
+  try {
+    const result = await callAPI('obtenerNegocios');
+    if (result.success) {
+      negocios = (result.negocios||[]).filter(n => n.activo && n.latitud && n.longitud);
+      renderizarGrid();
+    } else {
+      document.getElementById('contador').textContent = 'Error al cargar negocios';
+    }
+  } catch(e) {
+    document.getElementById('contador').textContent = 'Error de conexión';
+  }
+}
+
+function renderizarGrid(){
+  const term = document.getElementById('buscador').value.trim().toLowerCase();
+  const grid = document.getElementById('grid');
+  const filtrados = term ? negocios.filter(n => textoBusqueda(n).includes(term)) : negocios;
+  document.getElementById('contador').textContent = `Mostrando ${filtrados.length} de ${negocios.length} negocios`;
+  if (!filtrados.length) {
+    grid.innerHTML = '<div class="empty">😕 No se encontraron negocios</div>';
+    return;
+  }
+  grid.innerHTML = filtrados.map((n) => `
+    <div class="card" onclick="abrirNegocio(${negocios.indexOf(n)})">
+      <div class="card-banner" style="${n.banner?`background-image:url('${n.banner}');`:''}">
+        ${n.logo ? `<img class="card-logo" src="${n.logo}">` : ''}
+      </div>
+      <div class="card-body">
+        <h3>${escHTML(n.nombre)}</h3>
+        <p>${escHTML(n.descripcion||n.slogan||'')}</p>
+        <div class="card-actions">
+          <a class="btn-mini btn-mapa" href="https://www.google.com/maps/dir/?api=1&destination=${n.latitud},${n.longitud}" target="_blank" onclick="event.stopPropagation()">📍 Ver en mapa</a>
+          <button class="btn-mini btn-ver" onclick="event.stopPropagation();abrirNegocio(${negocios.indexOf(n)})">🌐 Ver negocio</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+document.getElementById('buscador').addEventListener('input', renderizarGrid);
+
+function abrirNegocio(idx){
+  const n = negocios[idx];
+  if (!n) return;
+  const html = construirLandingHTML(n, n.plantillaLanding || 'futurista');
+  document.getElementById('negocioTitle').textContent = '🏪 ' + (n.nombre || 'Negocio');
+  document.getElementById('negocioFrame').srcdoc = html;
+  document.getElementById('negocioOverlay').classList.add('active');
+}
+
+function cerrarNegocio(){
+  document.getElementById('negocioOverlay').classList.remove('active');
+  document.getElementById('negocioFrame').srcdoc = '';
+}
+
+document.getElementById('negocioOverlay').addEventListener('click', function(e){
+  if (e.target === this) cerrarNegocio();
+});
+
+function abrirMapaGeneral(){
+  document.getElementById('modalMapaOverlay').classList.add('active');
+  setTimeout(() => {
+    if (!mapaGeneral) {
+      mapaGeneral = L.map('mapaGeneral');
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap', maxZoom:19 }).addTo(mapaGeneral);
+      markersLayer = L.layerGroup().addTo(mapaGeneral);
+    }
+    markersLayer.clearLayers();
+    const bounds = [];
+    negocios.forEach((n, idx) => {
+      const lat = parseFloat(n.latitud), lng = parseFloat(n.longitud);
+      if (isNaN(lat) || isNaN(lng)) return;
+      bounds.push([lat,lng]);
+      const productos = (n.fotos||[]).filter(f=>f&&f.descripcion).map(f=>{
+        const partes = f.descripcion.split('&');
+        return partes[0].trim();
+      }).filter(Boolean).slice(0,3).join(', ');
+      const popupHTML = `
+        <div class="popup-negocio">
+          <div class="pop-banner" style="${n.banner?`background-image:url('${n.banner}');background-size:cover;background-position:center;`:''}"></div>
+          <h4>${escHTML(n.nombre)}</h4>
+          <p>${escHTML(productos || n.descripcion || '')}</p>
+          <div class="pop-actions">
+            <a class="pop-btn pop-btn-ir" href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank">🧭 Cómo llegar</a>
+            <button class="pop-btn pop-btn-ver" onclick="abrirNegocio(${idx})">🌐 Ver negocio</button>
+          </div>
+        </div>`;
+      const marker = L.marker([lat,lng]).addTo(markersLayer);
+      marker.bindTooltip(n.nombre || '', { permanent:false, direction:'top' });
+      marker.bindPopup(popupHTML, { maxWidth:220 });
+    });
+    if (bounds.length) mapaGeneral.fitBounds(bounds, { padding:[30,30] });
+    else mapaGeneral.setView([20.5888,-100.3899], 12);
+    mapaGeneral.invalidateSize();
+  }, 150);
+}
+
+function cerrarMapaGeneral(){
+  document.getElementById('modalMapaOverlay').classList.remove('active');
+}
+
+document.getElementById('btnVerMapa').addEventListener('click', abrirMapaGeneral);
+document.getElementById('modalMapaOverlay').addEventListener('click', function(e){ if (e.target===this) cerrarMapaGeneral(); });
+
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape') {
+    if (document.getElementById('negocioOverlay').classList.contains('active')) cerrarNegocio();
+    else if (document.getElementById('modalMapaOverlay').classList.contains('active')) cerrarMapaGeneral();
+  }
+});
+
+// ============================================================
+// LÓGICA DE ARMADO DE LANDING (copiada tal cual de index-sencillo.html)
+// ============================================================
+function getPlantillaOverridesCSS(plantilla, colorPrimario, colorSecundario, colorAcento) {
+  if (plantilla === 'minimalista') {
+    return `
+      body{background:#F4F5F7;color:#1E1E1E}
+      .l-wrap{background:#FFFFFF;border:1px solid #E2E2E2;box-shadow:0 4px 24px rgba(0,0,0,0.06)}
+      .l-banner{background:${colorPrimario} !important;background-image:none !important}
+      .l-banner-inner{background:rgba(0,0,0,0.15);min-height:80px}
+      .l-logo{border-color:#fff;box-shadow:none}
+      .l-banner-text h1{text-shadow:none}
+      .l-slogan{color:${colorPrimario};font-style:normal}
+      .l-gallery{grid-template-columns:1fr}
+      .l-gallery-item{border:1px solid #E2E2E2;box-shadow:none}
+      .l-gallery-item img{height:200px}
+      .l-gallery-titulo,.l-gallery-desc{color:#333}
+      .l-contact-item{background:#F9F9FA;border-left:3px solid ${colorAcento}}
+      .l-contact-item .cl{color:#777}
+      .l-contact-item .cv{color:#1E1E1E}
+      .l-section h2{color:#1E1E1E}
+      .l-map-card,.l-video-card{border-color:#E2E2E2}
+      .l-direccion{color:#666}
+      .l-btn{border-radius:6px;box-shadow:none}
+      .l-btn-call{background:${colorPrimario}}
+      .l-share-section{border-top-color:#E2E2E2}
+      .l-qr-img{border-color:${colorAcento}}
+      footer{background:#EFEFEF}
+      footer p{color:#555 !important}
+      .l-footer-msg{color:${colorPrimario} !important}
+    `;
+  }
+  if (plantilla === 'clasico') {
+    return `
+      body{background:#F3ECDD;color:#3B2A1A}
+      .l-wrap{background:#FFF9EF;border:1px solid ${colorPrimario};box-shadow:0 8px 30px rgba(59,42,26,0.15)}
+      .l-banner-inner{background:linear-gradient(135deg,rgba(59,42,26,0.35),rgba(59,42,26,0.55));min-height:130px}
+      .l-logo{border-color:${colorAcento}}
+      .l-slogan{color:${colorAcento}}
+      .l-gallery-item{background:#FFF9EF;border:1px solid ${colorPrimario}}
+      .l-gallery-titulo{color:#3B2A1A}
+      .l-gallery-desc{color:#6B5842}
+      .l-contact-item{background:#FBF3E3;border-left:3px solid ${colorAcento}}
+      .l-contact-item .cl{color:#8A7458}
+      .l-contact-item .cv{color:#3B2A1A}
+      .l-section h2{color:#3B2A1A}
+      .l-direccion{color:#6B5842}
+      .l-btn{border-radius:24px}
+      .l-btn-call{background:${colorPrimario}}
+      .l-share-section{border-top-color:${colorPrimario}}
+      footer{background:#2A1D12}
+    `;
+  }
+  return '';
+}
+
+function construirLandingHTML(n, plantillaOverride) {
+  const plantilla = plantillaOverride || n.plantillaLanding || 'futurista';
+  const whatsappDigits = String(n.whatsapp || '').replace(/\D/g, '');
+  const telDigits = String(n.telefono || '').replace(/\D/g, '');
+  const duenoWhatsappDigits = String(n.duenoTelefono || '').replace(/\D/g, '');
+  const fotos = (n.fotos || []).filter(f => f && f.url);
+  const tieneMapa = n.latitud && n.longitud;
+  const colorPrimario = n.colorPrimario || '#7B2FF7';
+  const colorSecundario = n.colorSecundario || '#FF00E5';
+  const colorAcento = n.colorAcento || '#00D4FF';
+  const fuenteLanding = n.fuenteLanding || "'Segoe UI',system-ui,sans-serif";
+  const descParts = (n.descripcion || '').split('&');
+  const descCorta = descParts[0].trim() || '';
+  const descLarga = descParts[1] ? descParts[1].trim() : descCorta;
+  const LIMITE_DESC_FOTO = 90;
+  const galeriaHTML = fotos.length ? `
+    <section class="l-gallery">${fotos.map((f, i) => {
+      const partes = (f.descripcion || '').split('&');
+      const titulo = partes[0].trim() || '📸 Foto';
+      const descLargaFoto = partes[1] ? partes[1].trim() : '';
+      let descCorta = descLargaFoto;
+      let descResto = '';
+      if (descLargaFoto.length > LIMITE_DESC_FOTO) {
+        let corte = descLargaFoto.lastIndexOf(' ', LIMITE_DESC_FOTO);
+        if (corte === -1) corte = LIMITE_DESC_FOTO;
+        descCorta = descLargaFoto.substring(0, corte);
+        descResto = descLargaFoto.substring(corte);
+      }
+      return `
+        <div class="l-gallery-item">
+          <img src="${f.url}" alt="" onclick="lOpenLightbox(${i})">
+          <div class="l-gallery-info">
+            <div class="l-gallery-titulo">${titulo}</div>
+            ${descLargaFoto ? `
+            <p class="l-gallery-desc">
+              <span>${descCorta}</span><span id="lDescResto${i}" style="display:none;">${descResto}</span>
+              ${descResto ? `<button class="l-vermas-btn" onclick="lToggleDescFoto(${i})">Ver más</button>` : ''}
+            </p>` : ''}
+          </div>
+        </div>`;
+    }).join('')}</section>` : '';
+
+  let urlExternaHTML = '';
+  const urlExternaRaw = n.Urlexterna || n.urlexterna || '';
+  if (urlExternaRaw && urlExternaRaw.trim() !== '') {
+    let idxSep = urlExternaRaw.indexOf('&');
+    if (idxSep === -1) idxSep = urlExternaRaw.indexOf('|');
+    if (idxSep === -1) idxSep = urlExternaRaw.indexOf(';');
+    if (idxSep !== -1) {
+      const nombreExt = urlExternaRaw.substring(0, idxSep).trim();
+      let urlExt = urlExternaRaw.substring(idxSep + 1).trim();
+      if (urlExt && !urlExt.startsWith('http://') && !urlExt.startsWith('https://')) {
+        urlExt = 'https://' + urlExt;
+      }
+      if (urlExt && (urlExt.startsWith('http://') || urlExt.startsWith('https://'))) {
+        urlExternaHTML = `
+          <section class="l-section l-negocio-externo" style="padding: 0 24px 24px;">
+            <div style="background: #0D1117; border-radius: 12px; padding: 20px; text-align: center; border: 2px solid ${colorAcento}; box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);">
+              <h2 style="font-size: 16px; margin-bottom: 12px; color: #E0E0E0;">🔗 ${nombreExt || 'Enlace externo'}</h2>
+              <a href="${urlExt}" target="_blank" rel="noopener" style="display: inline-block; padding: 14px 30px; background: linear-gradient(135deg, ${colorPrimario}, ${colorSecundario}); color: white; border-radius: 12px; font-weight: 700; font-size: 15px; text-decoration: none; box-shadow: 0 0 20px rgba(123, 47, 247, 0.4);">🌐 Visitar ${nombreExt || 'sitio web'}</a>
+            </div>
+          </section>`;
+      }
+    }
+  }
+
+  let videoEmbedUrl = '';
+  if (n.video && n.video.trim() !== '') {
+    let link = n.video.trim();
+    if (link.includes('/d/')) {
+      const fid = link.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (fid) videoEmbedUrl = 'https://drive.google.com/file/d/' + fid[1] + '/preview';
+    } else if (link.includes('youtube.com') || link.includes('youtu.be')) {
+      const match = link.match(/(?:v=|youtu\.be\/|\/shorts\/|\/embed\/)([a-zA-Z0-9_-]{11})/);
+      if (match && match[1]) videoEmbedUrl = 'https://www.youtube.com/embed/' + match[1] + '?rel=0';
+      else videoEmbedUrl = link;
+    } else {
+      videoEmbedUrl = link;
+    }
+  }
+  const videoHTML = videoEmbedUrl ? `
+    <section class="l-section l-video" style="text-align:center;">
+      <a href="${videoEmbedUrl}" target="_blank" rel="noopener" style="display:inline-block; padding:14px 30px; background:linear-gradient(135deg,${colorPrimario},${colorSecundario}); color:white; border-radius:12px; font-weight:700; font-size:15px; text-decoration:none; box-shadow:0 0 20px rgba(123,47,247,0.4);">🎬 Ver Video</a>
+    </section>` : '';
+
+  const mapaHTML = tieneMapa ? `
+    <section class="l-section l-mapa"><h2>📍 Encuéntranos</h2>
+      <div class="l-map-card"><iframe loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=${parseFloat(n.longitud)-0.006}%2C${parseFloat(n.latitud)-0.006}%2C${parseFloat(n.longitud)+0.006}%2C${parseFloat(n.latitud)+0.006}&layer=mapnik&marker=${n.latitud}%2C${n.longitud}"></iframe></div>
+      <p class="l-direccion">${n.direccion||n.ubicacion||''}</p>
+    </section>` : '';
+
+  const contactoItems = [
+    ['📞', 'Teléfono', n.telefono],
+    ['💬', 'WhatsApp', n.whatsapp],
+    ['🕐', 'Horario', n.horario],
+    ['✉️', 'Correo', n.correo]
+  ].filter(([, , valor]) => valor);
+
+  const contactoBotones = `
+    ${whatsappDigits?`<a href="https://wa.me/${whatsappDigits}" class="l-btn l-btn-whatsapp" target="_blank">💬 WhatsApp</a>`:''}
+    ${telDigits?`<a href="tel:${telDigits}" class="l-btn l-btn-call">📞 Llamar</a>`:''}
+    ${tieneMapa?`<a href="https://www.google.com/maps/dir/?api=1&destination=${n.latitud},${n.longitud}" class="l-btn l-btn-maps" target="_blank">🧭 Cómo llegar</a>`:''}
+    ${n.urlFacebook?`<a href="${n.urlFacebook}" class="l-btn l-btn-facebook" target="_blank">📘 Facebook</a>`:''}`;
+
+  const fotosJS = JSON.stringify(fotos.map(f => ({ url: f.url, descripcion: f.descripcion || '' })));
+
+  const footerHTML = `
+    <footer>
+      <p style="color:#00FF88;font-weight:700;font-size:13px;margin-bottom:4px;">⚡ FrontPage Express tu tienda online</p>
+      <p style="color:#888;font-size:12px;margin-bottom:10px;">¿Quieres una página como esta? ✉️ prototipowebapp@gmail.com</p>
+      ${(n.duenoMensaje || n.duenoTelefono || n.duenoCorreo) ? `
+        ${n.duenoMensaje?`<p class="l-footer-msg">${n.duenoMensaje}</p>`:''}
+        <div class="l-footer-contact">
+          ${duenoWhatsappDigits?`<a href="https://wa.me/${duenoWhatsappDigits}" target="_blank" rel="noopener">💬 ${n.duenoTelefono}</a>`:''}
+          ${n.duenoCorreo?`<a href="mailto:${n.duenoCorreo}">✉️ ${n.duenoCorreo}</a>`:''}
+        </div>` : ''}
+    </footer>`;
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>${n.nombre||'Negocio'} | ${n.slogan||'I.A.'}</title>
+<meta name="description" content="${descLarga.substring(0, 155)}">
+<meta property="og:title" content="${n.nombre||'Negocio'}">
+<meta property="og:description" content="${descLarga.substring(0, 155)}">
+${n.banner?`<meta property="og:image" content="${n.banner}">`:''}
+<style>*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:${fuenteLanding};color:#E0E0E0;background:#0A0E17;line-height:1.6;padding:20px}
+.l-wrap{max-width:640px;margin:0 auto;background:#1A1A2E;border-radius:20px;overflow:hidden;box-shadow:0 0 60px rgba(123,47,247,0.3);border:1px solid ${colorPrimario}}
+.l-banner{width:100%;background:linear-gradient(135deg,${colorPrimario} 0%,${colorSecundario} 100%);${n.banner?`background-image:url('${n.banner}');background-size:cover;background-position:center;`:''}}
+.l-banner-inner{display:flex;align-items:center;gap:14px;padding:16px;background:linear-gradient(135deg,rgba(0,0,0,0.4),rgba(0,0,0,0.6));min-height:100px}
+.l-logo{width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid ${colorAcento};flex-shrink:0;box-shadow:0 0 20px ${colorAcento}}
+.l-banner-text h1{color:white;font-size:22px;font-weight:800;text-shadow:0 0 20px rgba(255,255,255,0.5)}
+.l-banner-text p{color:rgba(255,255,255,0.9);font-size:12.5px;margin-top:4px}
+.l-slogan{padding:16px 24px 0;font-size:15px;font-style:italic;color:${colorAcento};font-weight:600}
+.l-gallery{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;padding:20px 24px 0}
+.l-gallery-item{border-radius:12px;overflow:hidden;background:#0D1117;display:flex;flex-direction:column;border:1px solid ${colorPrimario}}
+.l-gallery-item img{width:100%;height:140px;object-fit:cover;cursor:pointer}
+.l-gallery-info{padding:8px 10px 10px}
+.l-gallery-titulo{font-size:12.5px;font-weight:700;color:#E0E0E0}
+.l-gallery-desc{font-size:11.5px;color:#AAA;line-height:1.5}
+.l-vermas-btn{background:none;border:none;color:${colorAcento};font-weight:700;font-size:11.5px;cursor:pointer}
+.l-contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:24px}
+.l-contact-item{background:#0D1117;border-radius:10px;padding:12px 14px;border-left:3px solid ${colorAcento}}
+.l-contact-item .cl{font-size:10px;text-transform:uppercase;color:#888;font-weight:700}
+.l-contact-item .cv{font-size:14px;color:#E0E0E0;margin-top:2px}
+.l-section{padding:0 24px 24px}
+.l-section h2{font-size:18px;margin-bottom:12px;color:#E0E0E0}
+.l-map-card{border-radius:14px;overflow:hidden;border:2px solid ${colorPrimario}}
+.l-map-card iframe{width:100%;height:260px;border:0}
+.l-direccion{margin-top:10px;font-size:13px;color:#AAA}
+.l-popup-mensaje{position:fixed;left:50%;bottom:-120px;transform:translateX(-50%);background:linear-gradient(135deg,${colorPrimario},${colorSecundario});color:#fff;padding:14px 40px 14px 20px;border-radius:14px 14px 0 0;font-size:13px;font-weight:600;text-align:center;max-width:92%;z-index:4000;transition:bottom 0.5s ease}
+.l-popup-mensaje.mostrar{bottom:0}
+.l-popup-cerrar{position:absolute;top:6px;right:10px;background:none;border:none;color:#fff;font-size:16px;cursor:pointer}
+.l-btn-group{display:flex;flex-wrap:wrap;gap:10px;padding:0 24px 24px}
+.l-btn{flex:1;min-width:140px;text-align:center;padding:13px 18px;border-radius:12px;font-weight:700;font-size:14px;text-decoration:none}
+.l-btn-whatsapp{background:#25D366;color:white}
+.l-btn-call{background:${colorPrimario};color:white}
+.l-btn-maps{background:#4285F4;color:white}
+.l-btn-facebook{background:#1877F2;color:white}
+.l-share-section{padding:8px 24px 28px;text-align:center;border-top:2px solid ${colorPrimario}}
+.l-qr-img{width:150px;height:150px;border-radius:10px;border:4px solid ${colorAcento};padding:6px;cursor:pointer}
+.l-qr-caption{font-size:12px;color:#888}
+.l-qr-caption span{font-weight:700;color:${colorAcento};cursor:pointer}
+footer{background:#000;text-align:center;padding:22px 20px;font-size:14px}
+.l-footer-msg{color:${colorAcento};font-weight:700;font-size:13px;margin-bottom:10px}
+.l-footer-contact a{color:#25D366;text-decoration:none;font-size:13px}
+.l-lightbox{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:5000;align-items:center;justify-content:center;flex-direction:column;padding:20px}
+.l-lightbox.active{display:flex}
+.l-lightbox img{max-width:100%;max-height:75vh;border-radius:12px;border:3px solid ${colorAcento}}
+.l-lightbox-cap{color:#fff;font-size:13px;margin-top:14px}
+.l-lightbox-back{margin-top:22px;background:${colorAcento};color:#0A0E17;border:none;padding:12px 26px;border-radius:12px;font-weight:700;cursor:pointer}
+@media(max-width:480px){.l-gallery{grid-template-columns:repeat(2,1fr)}.l-contact-grid{grid-template-columns:1fr}}
+${getPlantillaOverridesCSS(plantilla, colorPrimario, colorSecundario, colorAcento)}
+</style></head><body>
+<div class="l-wrap plantilla-${plantilla}">
+  <div class="l-banner"><div class="l-banner-inner">
+  ${n.logo?`<img class="l-logo" src="${n.logo}" alt="Logo">`:''}
+  <div class="l-banner-text">
+    <h1>${n.nombre||''}</h1>
+    ${n.slogan?`<p style="color:rgba(255,255,255,0.9);font-size:13px;font-weight:600;margin-top:4px;">✨ ${n.slogan}</p>`:''}
+  </div>
+</div></div>
+${descLarga?`<p style="padding:12px 24px 0;font-size:13px;color:#AAA;font-style:italic;">📝 ${descLarga}</p>`:''}
+
+  ${n.mision?`<section class="l-section"><h2>🎯 Nuestra Misión</h2><p style="color:#AAA;">${n.mision}</p></section>`:''}
+  
+  ${galeriaHTML}
+  ${videoHTML}
+  ${urlExternaHTML}
+
+  <div class="l-contact-grid">
+    ${contactoItems.map(([icon,label,valor]) => `<div class="l-contact-item"><div class="cl">${icon} ${label}</div><div class="cv">${valor}</div></div>`).join('')}
+  </div>
+  ${mapaHTML}
+  <div class="l-btn-group">${contactoBotones}</div>
+  <section class="l-share-section">
+    <img class="l-qr-img" id="lQrImg" alt="QR" onclick="compartirQRWhatsApp()">
+    <p class="l-qr-caption"><span onclick="compartirQRWhatsApp()">📱 Escanea para compartir</span></p>
+  </section>
+  ${footerHTML}
+</div>
+<div class="l-lightbox" id="lLightbox">
+  <img id="lLightboxImg" src="" alt="">
+  <p class="l-lightbox-cap" id="lLightboxCap"></p>
+  <button class="l-lightbox-back" onclick="lCloseLightbox()">← Volver</button>
+</div>
+<script>
+(function(){
+  var lFotos = ${fotosJS};
+  window.lOpenLightbox = function(i){
+    var f = lFotos[i];
+    if(!f) return;
+    document.getElementById('lLightboxImg').src = f.url;
+    var partes = (f.descripcion||'').split('&');
+    document.getElementById('lLightboxCap').textContent = partes[1] ? partes[1].trim() : (partes[0].trim() || '📸');
+    document.getElementById('lLightbox').classList.add('active');
+  };
+  window.lCloseLightbox = function(){
+    document.getElementById('lLightbox').classList.remove('active');
+  };
+  window.lToggleDescFoto = function(i){
+    var resto = document.getElementById('lDescResto' + i);
+    if (resto) resto.style.display = resto.style.display === 'none' ? 'inline' : 'none';
+  };
+  document.getElementById('lLightbox').addEventListener('click', function(e){
+    if (e.target === this) lCloseLightbox();
+  });
+  var currentUrl = window.location.href;
+  var qrImg = document.getElementById('lQrImg');
+  if (qrImg) qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(currentUrl);
+  window.compartirQRWhatsApp = function() {
+    window.open('https://wa.me/?text=' + encodeURIComponent('${(String(n.nombre||'')).replace(/'/g, "\\'")}: ' + currentUrl), '_blank');
+  };
+var msg = '${(n.mensajeEmergente || n.slogan || '').replace(/'/g, "\\'")}';
+if (msg) {
+    var popup = document.createElement('div');
+    popup.className = 'l-popup-mensaje';
+    popup.innerHTML = '<span>✨ ' + msg + '</span><button class="l-popup-cerrar">×</button>';
+    document.body.appendChild(popup);
+    function mostrar(){ popup.classList.add('mostrar'); setTimeout(function(){ popup.classList.remove('mostrar'); }, 3000); }
+    popup.querySelector('.l-popup-cerrar').onclick = function(){ popup.classList.remove('mostrar'); };
+    setTimeout(mostrar, 2000);
+    setInterval(mostrar, 15000);
+  }
+})();
+<\/script>
+</body></html>`;
+}
+
+cargarNegocios();
+</script>
+</body>
+</html>
