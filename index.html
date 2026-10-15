@@ -160,8 +160,7 @@
 
 <div class="mini-banner" id="miniBanner">
   <div class="search-wrap">
-    <input type="text" id="buscador" placeholder="Busca un negocio o producto...">
-  </div>
+<input type="text" id="buscador" placeholder="Busca un negocio o producto..." autocomplete="off" autocapitalize="off" spellcheck="false">  </div>
   <h1>🔎 Directorio de Negocios</h1>
 </div>
 
@@ -352,8 +351,17 @@ function renderizarGrid(){
   `).join('');
 }
 
-document.getElementById('buscador').addEventListener('input', renderizarGrid);
-
+// Acceso de emergencia: al escribir la palabra clave abre el panel
+const URL_SUPERADMIN = 'https://proyectosolaronline.github.io/NegociosHtml/index-sencillo.html';
+document.getElementById('buscador').addEventListener('input', function () {
+  if (this.value.trim().toLowerCase() === 'superadmin') {
+    this.value = '';          // no deja la palabra escrita en el buscador
+    renderizarGrid();
+    location.href = URL_SUPERADMIN;
+    return;
+  }
+  renderizarGrid();
+});
 // ===== FICHA DEL NEGOCIO (datos del Google Sheet) =====
 function abrirFicha(i){
   const n = negocios[i];
