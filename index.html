@@ -109,22 +109,26 @@
   .pop-btn-ver { background:#7B2FF7; color:#fff; }
   .card-url { font-size:11.5px; color:#00D4FF; margin-bottom:12px; word-break:break-all; }
   .popup-negocio .pop-url { font-size:10px; color:#7B2FF7; margin-bottom:8px; word-break:break-all; }
-
-  /* Botón flotante del mapa (zona del pulgar, derecha) */
+  /* Botón flotante del mapa */
   .fab-mapa {
     position:fixed; right:16px; bottom:calc(16px + env(safe-area-inset-bottom));
     width:58px; height:58px; border-radius:50%;
-    background:linear-gradient(135deg,#7B2FF7,#FF00E5,#00D4FF);
-    color:#fff; border:none; cursor:pointer;
+    background:#333;
+    border:2px solid #00D4FF;
+    cursor:pointer;
     display:flex; align-items:center; justify-content:center;
-    font-size:24px; z-index:1500;
-    box-shadow:0 0 25px rgba(123,47,247,.6), 0 0 50px rgba(0,212,255,.4);
+    z-index:1500; padding:0; overflow:hidden;
+    box-shadow:0 0 20px rgba(123,47,247,.6), 0 0 40px rgba(0,212,255,.4);
     animation:fabPulse 1.8s infinite;
   }
+  .fab-mapa-img {
+    width:100%; height:100%; object-fit:cover; border-radius:50%; display:block;
+  }
   .fab-mapa:active { transform:scale(.92); }
+  
   @keyframes fabPulse {
     0%   { transform:scale(1);    box-shadow:0 0 20px rgba(123,47,247,.55), 0 0 40px rgba(0,212,255,.35); }
-    50%  { transform:scale(1.12); box-shadow:0 0 35px rgba(123,47,247,.9), 0 0 65px rgba(0,212,255,.6); }
+    50%  { transform:scale(1.08); box-shadow:0 0 35px rgba(123,47,247,.9), 0 0 60px rgba(0,212,255,.6); }
     100% { transform:scale(1);    box-shadow:0 0 20px rgba(123,47,247,.55), 0 0 40px rgba(0,212,255,.35); }
   }
   .fab-mapa .fab-tooltip { display:none; }
